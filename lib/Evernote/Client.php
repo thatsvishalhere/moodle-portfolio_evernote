@@ -1,7 +1,7 @@
 <?php
 
 namespace Evernote;
-
+/*
 require_once dirname(__DIR__)."/Thrift.php";
 require_once dirname(__DIR__)."/transport/TTransport.php";
 require_once dirname(__DIR__)."/transport/THttpClient.php";
@@ -10,7 +10,7 @@ require_once dirname(__DIR__)."/protocol/TBinaryProtocol.php";
 require_once dirname(__DIR__)."/packages/UserStore/UserStore.php";
 require_once dirname(__DIR__)."/packages/UserStore/UserStore_constants.php";
 require_once dirname(__DIR__)."/packages/NoteStore/NoteStore.php";
-
+*/
 class Client
 {
     private $consumerKey;
@@ -44,14 +44,13 @@ class Client
     public function getRequestToken($callbackUrl)
     {
         $oauth = new \OAuth($this->consumerKey, $this->consumerSecret);
-		$oauth->disableSSLChecks();
+		$oauthdisable = $oauth->disableSSLChecks();
         return $oauth->getRequestToken($this->getEndpoint('oauth'), $callbackUrl);
     }
 
     public function getAccessToken($oauthToken, $oauthTokenSecret, $oauthVerifier)
     {
         $oauth = new \OAuth($this->consumerKey, $this->consumerSecret);
-		$oauth->disableSSLChecks();
         $oauth->setToken($oauthToken, $oauthTokenSecret);
         $accessToken= $oauth->getAccessToken($this->getEndpoint('oauth'), null, $oauthVerifier);
 

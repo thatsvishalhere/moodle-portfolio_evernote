@@ -6,7 +6,7 @@ namespace EDAM\Types;
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  *  @generated
  */
-include_once $GLOBALS['THRIFT_ROOT'].'/packages/Types/Types_types.php';
+//include_once $GLOBALS['THRIFT_ROOT'].'/packages/Types/Types_types.php';
 
 $GLOBALS['EDAM_Types_Types_CONSTANTS'] = array();
 

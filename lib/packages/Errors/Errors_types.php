@@ -6,7 +6,7 @@ namespace EDAM\Error;
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  *  @generated
  */
-include_once $GLOBALS['THRIFT_ROOT'].'/Thrift.php';
+//include_once $GLOBALS['THRIFT_ROOT'].'/Thrift.php';
 
 
 $GLOBALS['\EDAM\Error\E_EDAMErrorCode'] = array(

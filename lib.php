@@ -20,7 +20,58 @@
  * @copyright Vishal Raheja  (email:thatsvishalhere@gmail.com)
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
- class portfolio_plugin_evernote extends portfolio_plugin_push_base {
+define("EVERNOTE_LIBS", dirname(__FILE__) . DIRECTORY_SEPARATOR . "lib");
+ini_set("include_path", ini_get("include_path") . PATH_SEPARATOR . EVERNOTE_LIBS);
+require_once($CFG->libdir.'/portfolio/plugin.php');
+
+require_once "Thrift.php";
+require_once 'packages/Limits/Limits_types.php';
+require_once 'packages/Errors/Errors_types.php';
+require_once 'packages/Types/Types_types.php';
+require_once "transport/TTransport.php";
+require_once "transport/THttpClient.php";
+require_once "transport/TBufferedTransport.php";
+require_once "protocol/TProtocol.php";
+require_once "protocol/TBinaryProtocol.php";
+require_once "packages/UserStore/UserStore_types.php";
+require_once "packages/UserStore/UserStore_constants.php";
+require_once "packages/UserStore/UserStore.php";
+require_once "packages/NoteStore/NoteStore_types.php";
+require_once "packages/NoteStore/NoteStore.php";
+require_once 'Evernote/Client.php';
+
+
+
+// Import the classes that we're going to be using
+use EDAM\Error\EDAMSystemException,
+    EDAM\Error\EDAMUserException,
+    EDAM\Error\EDAMErrorCode,
+    EDAM\Error\EDAMNotFoundException;
+
+// To use the main Evernote API interface.
+use Evernote\Client;
+
+//import Note class
+use EDAM\Types\Note;
+use EDAM\Types\NoteAttributes;
+use EDAM\NoteStore\NoteStoreClient;
+
+class portfolio_plugin_evernote extends portfolio_plugin_push_base {
+	
+	//token received after checking the user credentials and the permissions by the user.
+	private $oauthtoken = null;
+	
+	//to create a new client which would contact the evernote
+	private $client = null;
+	
+	//token after the checking the config credentials
+	private $requestToken = null;
+	
+	//since this plugin needs authentication from external sources, we have to disable this.
+	public static function allows_multiple_exports() {
+		return false;
+	}
+	
 	public static function get_name() {
         return get_string('pluginname', 'portfolio_evernote');
     }
@@ -96,10 +147,20 @@
 	*/
 	public function steal_control($stage) {
         global $CFG;
-        /*if ($stage != PORTFOLIO_STAGE_CONFIG) {
+        if ($stage != PORTFOLIO_STAGE_CONFIG) {
             return false;
         }
-
+		
+		//first stage of oauth from the user configuration
+		$this->getTokenFromConfig();
+		
+		//second stage oauth authentication
+		if($this->client)
+		{
+			$redirecturl = $this->getRedirectUrl();
+			redirect($redirecturl);
+		}
+		/*
         $this->initialize_oauth();
         if ($this->googleoauth->is_logged_in()) {
             return false;
@@ -144,5 +205,65 @@
             return 'nooauthcredentials';
         }
         return 0;
+    }
+	
+	/*
+		To get the token by verifying the Evernote API Consumer key and Secret
+	*/
+	function getTokenFromConfig() {
+		$consumerkey = $this->get_config('consumerkey');
+        $secret = $this->get_config('secret');
+		$sandboxflag = true; //change the flag to false for production
+		$this->client = new Client(array(
+                'consumerKey' => $consumerkey,
+                'consumerSecret' => $secret,
+                'sandbox' => $sandboxflag
+            ));
+		if($this->client)
+		{
+			$tempOauthToken = $this->client->getRequestToken($this->getCallbackUrl());
+			if($tempOauthToken) {
+				$this->requestToken = new StdClass;
+				$this->requestToken->oauth = $tempOauthToken['oauth_token'];
+				$this->requestToken->secret = $tempOauthToken['oauth_token_secret'];
+			}
+			else {
+				//throw failed operation exception.
+				throw new portfolio_plugin_exception('failedtoken', 'portfolio_evernote');
+			}
+		}
+		else {
+			//throw invalid credentials exception.
+				throw new portfolio_plugin_exception('improperkey', 'portfolio_evernote');
+		}
+		
+	}
+	
+	/*
+     * Unsure:Get the URL of this application. This URL is passed to the server (Evernote)
+     * while obtaining unauthorized temporary credentials (step 1). The resource owner
+     * is redirected to this URL after authorizing the temporary credentials (step 2).
+     */
+    private function getCallbackUrl()
+    {
+		global $CFG;
+        return $CFG->wwwroot . '/portfolio/add.php?postcontrol=1&type=evernote';
+    }
+	
+	/*
+     * Get the Evernote URL from where to get the permissions from the user.
+     */
+    function getRedirectUrl()
+    {
+		$consumerkey = $this->get_config('consumerkey');
+        $secret = $this->get_config('secret');
+		$sandboxflag = true; //change the flag to false for production
+		$new_client = new Client(array(
+                'consumerKey' => $consumerkey,
+                'consumerSecret' => $secret,
+                'sandbox' => $sandboxflag
+            ));
+
+        return $new_client->getAuthorizeUrl($this->requestToken->oauth);
     }
  }
