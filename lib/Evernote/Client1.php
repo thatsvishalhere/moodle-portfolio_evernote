@@ -5,9 +5,9 @@ if(!class_exists('TException'))
 {
 require_once dirname(__DIR__)."/Thrift.php";
 require_once dirname(__DIR__)."/transport/TTransport.php";
-require_once dirname(__DIR__)."/transport/THttpClient.php";
+require_once dirname(__DIR__)."/transport/THttpClient1.php";
 require_once dirname(__DIR__)."/protocol/TProtocol.php";
-require_once dirname(__DIR__)."/protocol/TBinaryProtocol.php";
+require_once dirname(__DIR__)."/protocol/TBinaryProtocol1.php";
 require_once dirname(__DIR__)."/packages/UserStore/UserStore.php";
 require_once dirname(__DIR__)."/packages/UserStore/UserStore_constants.php";
 require_once dirname(__DIR__)."/packages/NoteStore/NoteStore.php";
@@ -45,7 +45,7 @@ class Client
     public function getRequestToken($callbackUrl)
     {
         $oauth = new \OAuth($this->consumerKey, $this->consumerSecret);
-		$oauth->disableSSLChecks();
+		$oauthdisable = $oauth->disableSSLChecks();
         return $oauth->getRequestToken($this->getEndpoint('oauth'), $callbackUrl);
     }
 
@@ -82,17 +82,17 @@ class Client
         $userStore = $this->getUserStore();
         $noteStoreUrl = $userStore->getNoteStoreUrl();
 
-        return new Store($this->token, '\EDAM\NoteStore\NoteStoreClient', $noteStoreUrl);
+        return new Store($this->token, '\EDAM\NoteStore\NoteStoreClient1', $noteStoreUrl);
     }
 
     public function getSharedNoteStore($linkedNotebook)
     {
         $noteStoreUrl = $linkedNotebook->noteStoreUrl;
-        $noteStore = new Store($this->token, '\EDAM\NoteStore\NoteStoreClient', $noteStoreUrl);
+        $noteStore = new Store($this->token, '\EDAM\NoteStore\NoteStoreClient1', $noteStoreUrl);
         $sharedAuth = $noteStore->authenticateToSharedNotebook($linkedNotebook->shareKey);
         $sharedToken = $sharedAuth->authenticationToken;
 
-        return new Store($sharedToken, '\EDAM\NoteStore\NoteStoreClient', $noteStoreUrl);
+        return new Store($sharedToken, '\EDAM\NoteStore\NoteStoreClient1', $noteStoreUrl);
     }
 
     public function getBusinessNoteStore()
@@ -102,7 +102,7 @@ class Client
         $bizToken = $bizAuth->authenticationToken;
         $noteStoreUrl = $bizAuth->noteStoreUrl;
 
-        return new Store($bizToken, '\EDAM\NoteStore\NoteStoreClient', $noteStoreUrl);
+        return new Store($bizToken, '\EDAM\NoteStore\NoteStoreClient1', $noteStoreUrl);
     }
 
     protected function getEndpoint($path = null)
@@ -170,11 +170,11 @@ class Store
             }
         }
 
-        $httpClient = new \THttpClient(
+        $httpClient = new \THttpClient1(
             $parts['host'], $parts['port'], $parts['path'], $parts['scheme']);
         $httpClient->addHeaders(
             array('User-Agent' => $this->userAgentId.' / '.$this->getSdkVersion().'; PHP / '.phpversion()));
-        $thriftProtocol = new \TBinaryProtocol($httpClient);
+        $thriftProtocol = new \TBinaryProtocol1($httpClient);
 
         return new $clientClass($thriftProtocol, $thriftProtocol);
     }

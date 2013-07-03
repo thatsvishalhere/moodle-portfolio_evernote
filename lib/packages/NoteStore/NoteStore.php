@@ -6,9 +6,9 @@ namespace EDAM\NoteStore;
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  *  @generated
  */
-//include_once $GLOBALS['THRIFT_ROOT'].'/Thrift.php';
+include_once $GLOBALS['THRIFT_ROOT'].'/Thrift.php';
 
-//include_once $GLOBALS['THRIFT_ROOT'].'/packages/NoteStore/NoteStore_types.php';
+include_once $GLOBALS['THRIFT_ROOT'].'/packages/NoteStore/NoteStore_types.php';
 
 interface NoteStoreIf {
   public function getSyncState($authenticationToken);

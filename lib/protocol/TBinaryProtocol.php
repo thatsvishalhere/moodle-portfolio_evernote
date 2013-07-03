@@ -20,7 +20,7 @@
  * @package thrift.protocol
  */
 
-//include_once $GLOBALS['THRIFT_ROOT'].'/transport/TBufferedTransport.php';
+include_once $GLOBALS['THRIFT_ROOT'].'/transport/TBufferedTransport.php';
 
 /**
  * Binary implementation of the Thrift protocol.

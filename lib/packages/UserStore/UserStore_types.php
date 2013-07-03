@@ -6,10 +6,10 @@ namespace EDAM\UserStore;
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  *  @generated
  */
-//include_once $GLOBALS['THRIFT_ROOT'].'/Thrift.php';
+include_once $GLOBALS['THRIFT_ROOT'].'/Thrift.php';
 
-//include_once $GLOBALS['THRIFT_ROOT'].'/packages/Types/Types_types.php';
-//include_once $GLOBALS['THRIFT_ROOT'].'/packages/Errors/Errors_types.php';
+include_once $GLOBALS['THRIFT_ROOT'].'/packages/Types/Types_types.php';
+include_once $GLOBALS['THRIFT_ROOT'].'/packages/Errors/Errors_types.php';
 
 class PublicUserInfo {
   static $_TSPEC;

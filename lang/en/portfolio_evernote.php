@@ -23,7 +23,7 @@
  */
 
 $string['consumerkey'] = 'Consumer Key';
-$string['noauthtoken'] = 'An authentication token has not been recieved from Evernote. Please ensure you are allowing moodle to access your Evernote account';
+$string['noauthtoken'] = 'An authentication token has not been recieved from Evernote. Please ensure you are allowing the application to access your Evernote account';
 $string['nooauthcredentials'] = 'OAuth credentials (Evernote API Consumer key and Secret) required.';
 $string['nooauthcredentials_help'] = 'To use the Evernote portfolio plugin you must configure OAuth credentials in the portfolio settings.';
 $string['nosessiontoken'] = 'A session token does not exist preventing export to Evernote.';
@@ -33,3 +33,9 @@ $string['sendfailed'] = 'The file {$a} failed to transfer to Evernote';
 $string['secret'] = 'Consumer Secret';
 $string['improperkey'] = 'Wrong Evernote API Customer Key or Secret';
 $string['failedtoken'] = 'Unable to get Token from the current Customer key and Secret';
+$string['noauthfromuser'] = 'The Evernote user did not authorize the temporary credentials';
+$string['tokencredentialsfailed'] = 'Failed to obtain token credentials.';
+$string['errorcreatingnotebook'] = 'Error while creating notebook';
+$string['customnotetitlelabel'] = 'Export Note Title';
+$string['defaultnotetitle'] = 'Moodle Portfolio Export';
+$string['errorlistingnotebook'] = 'Error while listing notebooks from your account';

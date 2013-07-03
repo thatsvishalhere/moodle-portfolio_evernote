@@ -6,9 +6,9 @@ namespace EDAM\Types;
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  *  @generated
  */
-//include_once $GLOBALS['THRIFT_ROOT'].'/Thrift.php';
+include_once $GLOBALS['THRIFT_ROOT'].'/Thrift.php';
 
-//include_once $GLOBALS['THRIFT_ROOT'].'/packages/Limits/Limits_types.php';
+include_once $GLOBALS['THRIFT_ROOT'].'/packages/Limits/Limits_types.php';
 
 $GLOBALS['\EDAM\Types\E_PrivilegeLevel'] = array(
   'NORMAL' => 1,
