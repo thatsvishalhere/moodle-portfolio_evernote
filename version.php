@@ -18,13 +18,14 @@
  * Version details
  *
  * @package    portfolio
- * @subpackage googledocs
+ * @subpackage evernote
+ * @copyright  2013 Vishal Raheja
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2013070300;        // The current plugin version (Date: YYYYMMDDXX).
+$plugin->version   = 2013070900;        // The current plugin version (Date: YYYYMMDDXX).
 $plugin->requires  = 2012112900;        // Requires this Moodle version.
 $plugin->component = 'portfolio_evernote'; // Full name of the plugin (used for diagnostics).
 $plugin->cron      = 0;

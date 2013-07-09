@@ -17,9 +17,10 @@
 /**
  * Strings for evernote portfolio
  *
- * @package   portfolio_evernote
- * @copyright Vishal Raheja  (thatsvishalhere@gmail.com)
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package    portfolio
+ * @subpackage evernote
+ * @copyright  2013 Vishal Raheja
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 $string['consumerkey'] = 'Consumer Key';
