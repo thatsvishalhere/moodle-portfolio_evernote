@@ -27,11 +27,8 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir.'/portfolio/plugin.php');
 require_once($CFG->libdir . '/oauthlib.php');
-require_once(dirname(__FILE__).'/lib/Evernote/Client.php');
-require_once(dirname(__FILE__).'/lib/packages/Types/Types_types.php');
-if (!isset($GLOBALS['THRIFT_ROOT'])) {
-    $GLOBALS['THRIFT_ROOT'] = dirname(__FILE__).'/lib';
-}
+require_once(dirname(__FILE__).'/lib/evernote/Evernote/Client.php');
+require_once(dirname(__FILE__).'/lib/evernote/packages/Types/Types_types.php');
 
 // Import the classes that we're going to be using.
 use EDAM\Error\EDAMSystemException,
@@ -62,6 +59,44 @@ use EDAM\NoteStore\NoteStoreClient;
 class portfolio_plugin_evernote extends portfolio_plugin_push_base {
 
     /**
+     * URL to the API.
+     * Production services: https://www.evernote.com
+     * Development services: https://sandbox.evernote.com
+     * @var string
+     */
+    private $api = 'https://sandbox.evernote.com';
+
+	/**
+     * The oauth_helper for oauth authentication of Evernote.
+     * @var oauth_helper
+     */
+    private $oauth;
+
+	/**
+     * Note store URL retrieved after the user authenticates the application.
+     * @var string
+     */
+    private $notestoreurl = null;
+
+	/**
+     * Notestore of the user.
+     * @var NoteStoreClient
+     */
+    private $notestore;
+
+	/**
+     * Prefix for the user preferences.
+     * @var string
+     */
+    private $settingprefix = 'evernote_';
+
+	/**
+     * Token received after a valid OAuth authentication.
+     * @var string
+     */
+    private $accesstoken = null;
+
+    /**
      * Token received from Evernote after checking the user credentials and the permissions by the user.
      * @var string
      */
@@ -77,31 +112,31 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      * Token after the checking the config credentials provided by the administrator.
      * @var string
      */
-    private $request_token = null;
+    private $requesttoken = null;
 
     /**
      * The evernote markup language content that is to be shown in the notebook.
      * @var string
      */
-    private $enml_content;
+    private $enmlcontent;
 
     /**
      * The verifier string if the user allows the application to access his evernote account.
      * @var string
      */
-    private $oauth_verifier;
+    private $oauthverifier;
 
     /**
      * Notebooks in the Evernote account of the user.
      * @var array
      */
-    private $notebook_array;
+    private $notebookarray;
 
     /**
      * The user's default notebook guid.
      * @var string
      */
-    private $default_notebook_guid;
+    private $defaultnotebookguid;
 
     /**
      * Sandbox flag. Turn it to false for production.
@@ -127,8 +162,8 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $mform->addElement('text', 'plugin_notetitle', get_string('customnotetitlelabel', 'portfolio_evernote'));
         $mform->setDefault('plugin_notetitle', get_string('defaultnotetitle', 'portfolio_evernote'));
         $this->list_notebooks();
-        $notebookselect = $mform->addElement('select', 'plugin_notebooks', 'Select Notebook', $this->notebook_array);
-        $notebookselect->setSelected($this->default_notebook_guid);
+        $notebookselect = $mform->addElement('select', 'plugin_notebooks', 'Select Notebook', $this->notebookarray);
+        $notebookselect->setSelected($this->defaultnotebookguid);
         $strrequired = get_string('required');
         $mform->addRule('plugin_notetitle', $strrequired, 'required', null, 'client');
         $mform->addRule('plugin_notebooks', $strrequired, 'required', null, 'client');
@@ -136,7 +171,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
 
     public function get_export_summary() {
         return array('Note Title'=>$this->get_export_config('notetitle'),
-            'Notebook'=>$this->notebook_array[$this->get_export_config('notebooks')]);
+            'Notebook'=>$this->notebookarray[$this->get_export_config('notebooks')]);
     }
 
     public function get_allowed_export_config() {
@@ -148,22 +183,27 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $writefile = "write.txt";
         $current = file_get_contents($writefile);
         foreach ($files as $file) {
-            // echo $file->get_filename()."<br />";
+
             // Get the enml of only those files which have been modified content of the current page and converted into html.
             if ($file->get_filepath() == "/") {
-                $htmlcontents = $file->get_content();
-                /*$myFile = "write.html";
-                $fh = fopen($myFile, 'w');*/
-                $this->enml_content = $this->getenml($htmlcontents);
-                /*fwrite($fh, $this->enml_content);
-                //fwrite($fh, $htmlcontents);
-                fclose($fh);*/
+                if ($file->get_mimetype()=='text/html') {
+                    $htmlcontents = $file->get_content();
+                    /*$myFile = "write.html";
+                    $fh = fopen($myFile, 'w');*/
+                    $this->enmlcontent = $this->getenml($htmlcontents);
+                    /*fwrite($fh, $this->enmlcontent);
+                    //fwrite($fh, $htmlcontents);
+                    fclose($fh);*/
+                } else {
+                    $htmlcontents = 'The export file has been attached';
+                    $this->enmlcontent = $this->getenml($htmlcontents);
+                    // Add the file as attachment after this.
+                }
             }
         }
     }
 
     public function send_package() {
-        // $this->create_note($this->enml_content);
         $this->create_note();
         return true;
     }
@@ -213,12 +253,6 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
 
         // First stage of oauth from the user configuration.
         $this->get_token_from_config();
-
-        // Redirect to the give permissions page or the login page.
-        if ($this->client) {
-            $redirecturl = $this->get_redirect_url();
-            redirect($redirecturl);
-        }
     }
 
     public function post_control($stage, $params) {
@@ -226,16 +260,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
             return;
         }
 
-        // Second stage of authentication.
-        // Checking if the user has authenticated the application to get access to the evernote account.
-        if (isset($_GET['oauth_verifier'])) {
-            $this->oauth_verifier = $_GET['oauth_verifier'];
-        } else {
-            // If the User clicks "decline" instead of "authorize", no verification code is sent.
-            throw new portfolio_plugin_exception('noauthfromuser', 'portfolio_evernote');
-        }
-
-        // Third and final step for oauth authentication.
+        // Second and third (final) steps for oauth authentication.
         // Storing the access credentials for the user.
         $this->get_token_credentials();
     }
@@ -256,135 +281,56 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      * To get the token by verifying the Evernote API Consumer key and Secret
      */
     private function get_token_from_config() {
-        $consumerkey = $this->get_config('consumerkey');
-        $secret = $this->get_config('secret');
-        $this->client = new Client(array(
-                'consumerKey' => $consumerkey,
-                'consumerSecret' => $secret,
-                'sandbox' => $this->sandboxflag
-            ));
-        if ($this->client) {
-            $temp_oauth_token = $this->client->getRequestToken($this->get_callback_url());
-            if ($temp_oauth_token) {
-                $this->request_token = new StdClass;
-                $this->request_token->oauth = $temp_oauth_token['oauth_token'];
-                $this->request_token->secret = $temp_oauth_token['oauth_token_secret'];
-                $_SESSION['evernoteoauth'] = $temp_oauth_token['oauth_token'];
-                $_SESSION['evernotesecret'] = $temp_oauth_token['oauth_token_secret'];
-            } else {
-                // Throw failed operation exception.
-                throw new portfolio_plugin_exception('failedtoken', 'portfolio_evernote');
-            }
-        } else {
-            // Throw invalid credentials exception.
-                throw new portfolio_plugin_exception('improperkey', 'portfolio_evernote');
-        }
-
-    }
-
-    /**
-     * Get the URL of this application. This URL is passed to the server (Evernote)
-     * while obtaining unauthorized temporary credentials (step 1). The resource owner
-     * is redirected to this URL after authorizing the temporary credentials (step 2).
-     * 
-     * @return string
-     */
-    private function get_callback_url() {
-        global $CFG;
-        return $CFG->wwwroot . '/portfolio/add.php?postcontrol=1&type=evernote';
-    }
-
-    /**
-     * Get the Evernote URL from where to get the permissions from the user.
-     * 
-     * @return string
-     */
-    private function get_redirect_url() {
-        $consumerkey = $this->get_config('consumerkey');
-        $secret = $this->get_config('secret');
-        $new_client = new Client(array(
-                'consumerKey' => $consumerkey,
-                'consumerSecret' => $secret,
-                'sandbox' => $this->sandboxflag
-            ));
-
-        return $new_client->getAuthorizeUrl($this->request_token->oauth);
+        $result = $this->get_oauth()->request_token();
+        set_user_preference($this->settingprefix.'tokensecret', $result['oauth_token_secret']);
+        $url = $result['authorize_url'];
+        redirect($url);
     }
 
     /**
      * To get the token for the user after the user has granted access to his Evernote account.
      */
     private function get_token_credentials() {
-        $consumerkey = $this->get_config('consumerkey');
-        $secret = $this->get_config('secret');
-        $this->client = new Client(array(
-                'consumerKey' => $consumerkey,
-                'consumerSecret' => $secret,
-                'sandbox' => $this->sandboxflag
-            ));
-        if ($this->client) {
-            $access_token_info = $this->client->getAccessToken($_SESSION['evernoteoauth'],
-                $_SESSION['evernotesecret'], $this->oauth_verifier);
-            if ($access_token_info) {
-                $this->oauthtoken = $access_token_info['oauth_token'];
-            } else {
-                // Throw failed operation exception.
-                throw new portfolio_plugin_exception('failedtoken', 'portfolio_evernote');
-            }
-        } else {
-            // Throw invalid credentials exception.
-            throw new portfolio_plugin_exception('improperkey', 'portfolio_evernote');
-        }
-        unset($_SESSION['evernoteoauth']);
-        unset($_SESSION['evernotesecret']);
+        $token  = optional_param('oauth_token', '', PARAM_TEXT);
+        $verifier  = optional_param('oauth_verifier', '', PARAM_TEXT);
+        $secret = get_user_preferences($this->settingprefix.'tokensecret', '');
+        $access = $this->get_oauth()->get_access_token($token, $secret, $verifier);
+        $notestore  = $access['edam_noteStoreUrl'];
+        $userid  = $access['edam_userId'];
+        $accesstoken  = $access['oauth_token'];
+        $this->accesstoken = $accesstoken;
+        $this->notestoreurl = $notestore;
+        /*set_user_preference($this->settingprefix.'accesstoken', $accesstoken);
+        set_user_preference($this->settingprefix.'notestoreurl', $notestore);*/
+        //set_user_preference($this->settingprefix.'userid', $userid);
     }
 
     /**
      * Create the note from the class variable of enml content.
      */
     private function create_note() {
-        $access_token = $this->oauthtoken;
-        $client = new Client(array(
-            'token' => $access_token,
-            'sandbox' => $this->sandboxflag
-        ));
-        if ($client) {
-            $note = new Note();
-            $note->title = $this->get_export_config('notetitle');
-            $note->content = $this->enml_content;
-            $note->notebookGuid = $this->get_export_config('notebooks');
-            $notebooks = $client->getNoteStore()->createNote($note);
-        } else {
-            // Throw invalid credentials exception.
-            throw new portfolio_plugin_exception('errorcreatingnotebook', 'portfolio_evernote');
-        }
+        $note = new Note();
+        $note->title = $this->get_export_config('notetitle');
+        $note->content = $this->enmlcontent;
+        $note->notebookGuid = $this->get_export_config('notebooks');
+        $notebooks = $this->get_notestore()->createNote($this->accesstoken, $note);
     }
 
     /**
      * To get the list of the user's notebooks.
      */
     private function list_notebooks() {
-        $access_token = $this->oauthtoken;
-        $client = new Client(array(
-            'token' => $access_token,
-            'sandbox' => $this->sandboxflag
-        ));
-        if ($client) {
-            $notebooks = $client->getNoteStore()->listNotebooks();
-            $this->notebook_array = array();
-            if (!empty($notebooks)) {
-                foreach ($notebooks as $notebook) {
-                    if ($notebook->defaultNotebook) {
-                        $this->default_notebook_guid = $notebook->guid;
-                        $this->notebook_array[$notebook->guid] = '(Default) '.$notebook->name;
-                    } else {
-                        $this->notebook_array[$notebook->guid] = $notebook->name;
-                    }
+        $notebooks = $this->get_notestore()->listNotebooks($this->accesstoken);
+        $this->notebookarray = array();
+        if (!empty($notebooks)) {
+            foreach ($notebooks as $notebook) {
+                if ($notebook->defaultNotebook) {
+                    $this->defaultnotebookguid = $notebook->guid;
+                    $this->notebookarray[$notebook->guid] = get_string('denotedefaultnotebook', 'portfolio_evernote', $notebook->name);
+                } else {
+                    $this->notebookarray[$notebook->guid] = $notebook->name;
                 }
             }
-        } else {
-            // Throw invalid credentials exception.
-            throw new portfolio_plugin_exception('errorlistingnotebook', 'portfolio_evernote');
         }
     }
 
@@ -395,20 +341,15 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      * @return string  ENML string of the given HTML string.
      */
     private function getenml($htmlcontents) {
-        $htmlcontents = strip_tags($htmlcontents, '<a><abbr><acronym><address><area><b><bdo><big><blockquote><br><caption>'.
-            '<center><cite><code><col><colgroup><dd><del><dfn><div><dl><dt><em><font><h1><h2><h3><h4><h5><h6><hr><i><img><ins>'.
-            '<kbd><li><map><ol><p><pre><q><s><samp><small><span><strike><strong><sub><sup><table><tbody><td><tfoot><th><thead>'.
-            '<title><tr><tt><u><ul><var><xmp>');
+        $htmlcontents = strip_tags($htmlcontents, get_string('allowedtags', 'portfolio_evernote'));
         // Removing the disallowed attributes.
-        $htmlcontents = '<body>'.$htmlcontents.'</body>';
+        $htmlcontents = get_string('enclosebodytags', 'portfolio_evernote', $htmlcontents);
         $dom = new DOMDocument();
         $dom->loadHTML($htmlcontents);
         $elements = $dom->getElementsByTagName('body')->item(0);
         $elements = $this->reform_style_attribute($elements);
         $htmlcontents = $this->get_inner_html($elements);
-        $enmlcontents = '<?xml version="1.0" encoding="UTF-8"?>' .
-            '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">' .
-            '<en-note>'.$htmlcontents.'</en-note>';
+        $enmlcontents = get_string('encloseenmltags', 'portfolio_evernote', $htmlcontents);
         return $enmlcontents;
     }
 
@@ -419,14 +360,14 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      * @return string of the inner html of the DOM element given.
      */
     private function get_inner_html( $node ) {
-        $inner_html= '';
+        $innerhtml= '';
         if ($node->childNodes!==null) {
             $children = $node->childNodes;
             foreach ($children as $child) {
-                $inner_html .= $child->ownerDocument->saveXML( $child );
+                $innerhtml .= $child->ownerDocument->saveXML( $child );
             }
         }
-        return $inner_html;
+        return $innerhtml;
     }
 
     /**
@@ -467,83 +408,66 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
             if ($elements->hasAttribute('tabindex')) {
                 $elements->removeAttribute('tabindex');
             }
-            if ($elements->hasAttribute('style')) {
-                $style_string = $elements->getAttribute('style');
-                $elements->removeAttribute('style');
-                $style_string = preg_replace('/\s+/', '', $style_string);
-                $individualpropertiesarray = explode(';', $style_string);
-                $property = array();
-                $value = array();
-                foreach ($individualpropertiesarray as $individual) {
-                    $array = array();
-                    $array = explode(':', $individual);
-                    $property[] = $array[0];
-                    if (array_key_exists(1, $array)) {
-                        $value[] = $array[1];
-                    } else {
-                        $value[] = '';
-                    }
-                }
-                $to_be_added = '';
-                $end_string = '';
-                if (in_array("color", $property) || in_array("font-family", $property) || in_array("font-style", $property) ||
-                    in_array("font-weight", $property) || in_array("text-decoration", $property) ||
-                    in_array("vertical-align", $property)) {
-                    $to_be_added .= '<font ';
-                    $end_string .= '';
-                    $fontfamily_key = array_search('font-family', $property);
-                    $color_key = array_search('color', $property);
-                    $font_style_key = array_search('font-style', $property);
-                    $fontweight_key = array_search('font-weight', $property);
-                    $textdecoration_key = array_search('text-decoration', $property);
-                    $verticalalign_key = array_search('vertical-align', $property);
-                    if ($fontfamily_key!==false) {
-                        $to_be_added .= ' face ="' . str_replace("'", "\\'", $value[$fontfamily_key]).'"';
-                    }
-                    if ($color_key!==false) {
-                        $to_be_added .= ' color ="' . $value[$color_key] . '"';
-                    }
-                    $to_be_added .= '>';
-                    if ($font_style_key!==false && ($value[$font_style_key]=="italic" || $value[$font_style_key]=="oblique")) {
-                        $to_be_added .= '<i>';
-                        $end_string .= '</i>';
-                    }
-                    if ($fontweight_key!==false && $value[$font_style_key]=="bold") {
-                        $to_be_added .= '<b>';
-                        $end_string .= '</b>';
-                    }
-                    if ($textdecoration_key!==false) {
-                        if ($value[$textdecoration_key]=="underline") {
-                            $to_be_added .= '<u>';
-                            $end_string .= '</u>';
-                        } else if ($value[$textdecoration_key]=="line-through") {
-                            $to_be_added .= '<strike>';
-                            $end_string .= '</strike>';
-                        }
-                    }
-                    if ($verticalalign_key!==false) {
-                        if ($value[$verticalalign_key]=="super") {
-                            $to_be_added .= '<sup>';
-                            $end_string .= '</sup>';
-                        } else if ($value[$verticalalign_key]=="sub") {
-                            $to_be_added .= '<sub>';
-                            $end_string .= '</sub>';
-                        }
-                    }
-                    $end_string .= '</font>';
-                }
-                $innerhtml = $this->get_inner_html( $elements );
-                $nochildnodes = $elements->childNodes->length;
-                for ($x=0; $x<$nochildnodes; $x++) {
-                    $elements->removeChild($elements->childNodes->item(0));
-                }
-                $f = $elements->ownerDocument->createDocumentFragment();
-                $result = $f->appendXML($to_be_added.$innerhtml.$end_string);
-                if ($f->hasChildNodes()) {
-                    $elements->appendChild($f);
-                }
-            }
         }
         return $elements;
     }
+
+    /**
+     * Get the OAuth object.
+     *
+     * @return oauth_helper object.
+     */
+	private function get_oauth() {
+        if (empty($this->oauth)) {
+            $callbackurl = new moodle_url('/portfolio/add.php', array(
+                'postcontrol' => '1',
+                'type' => 'evernote'
+            ));
+
+            $args['oauth_consumer_key'] = $this->get_config('consumerkey');
+            $args['oauth_consumer_secret'] = $this->get_config('secret');
+            $args['oauth_callback'] = $callbackurl->out(false);
+            $args['api_root'] = $this->api;
+            $args['request_token_api'] = $this->api . '/oauth';
+            $args['access_token_api'] = $this->api . '/oauth';
+            $args['authorize_url'] = $this->api . '/OAuth.action';
+            $this->oauth = new oauth_helper($args);
+        }
+        return $this->oauth;
+    }
+
+    /**
+     * Return the object to call Evernote's API
+     *
+     * @return NoteStoreClient object
+     */
+    private function get_notestore() {
+        if (empty($this->notestore)) {
+            $parts = parse_url($this->notestoreurl);
+            if (!isset($parts['port'])) {
+                if ($parts['scheme'] === 'https') {
+                    $parts['port'] = 443;
+                } else {
+                    $parts['port'] = 80;
+                }
+            }
+            $notestorehttpclient = new THttpClient($parts['host'], $parts['port'], $parts['path'], $parts['scheme']);
+            $notestoreprotocol = new TBinaryProtocol($notestorehttpclient);
+            $this->notestore = new NoteStoreClient($notestoreprotocol, $notestoreprotocol);
+        }
+        return $this->notestore;
+    }
+/*********************************************************************************************/	
+	/**
+     * Constructor
+     *
+     * @param int $instanceid id of plugin instance to construct
+     * @param mixed $record stdclass object or named array - use this if you already have the record to avoid another query
+     */
+    /*function __construct($instanceid, $record=null) {
+        parent::__construct($instanceid, $record);
+
+        $this->accesstoken = get_user_preferences($this->settingprefix.'accesstoken', null);
+        $this->notestoreurl = get_user_preferences($this->settingprefix.'notestoreurl', null);
+    }*/
 }
