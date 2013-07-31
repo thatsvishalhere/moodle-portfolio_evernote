@@ -437,29 +437,16 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
                 $elements->removeChild($elements->childNodes->item(0));
                 $elements->appendChild($element);
             }
-            if ($elements->hasAttribute('class')) {
-                $elements->removeAttribute('class');
-            }
-            if ($elements->hasAttribute('id')) {
-                $elements->removeAttribute('id');
-            }
-            if ($elements->hasAttribute('onclick')) {
-                $elements->removeAttribute('onclick');
-            }
-            if ($elements->hasAttribute('ondblclick')) {
-                $elements->removeAttribute('ondblclick');
-            }
-            if ($elements->hasAttribute('accesskey')) {
-                $elements->removeAttribute('accesskey');
-            }
-            if ($elements->hasAttribute('data')) {
-                $elements->removeAttribute('data');
-            }
-            if ($elements->hasAttribute('dynsrc')) {
-                $elements->removeAttribute('dynsrc');
-            }
-            if ($elements->hasAttribute('tabindex')) {
-                $elements->removeAttribute('tabindex');
+
+            $bannedattributes = array('class', 'id', 'accesskey', 'data', 'dynsrc', 'tabindex');
+            foreach ($elements->attributes as $attr) {
+                $attrname = strtolower($attr->nodeName);
+
+                // Removing all the banned attributes along with 
+                // all the attributes starting with 'on'.
+                if (in_array($attrname, $bannedattributes) || strpos($attrname, 'on') === 0) {
+                    $elements->removeAttribute($attrname);
+                }
             }
         }
         return $elements;
