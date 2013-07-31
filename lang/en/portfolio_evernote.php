@@ -43,3 +43,6 @@ $string['errorlistingnotebook'] = 'Error while listing notebooks from your accou
 $string['denotedefaultnotebook'] = '{$a} (Default)';
 $string['nopermission'] = 'Access to Evernote account declined.';
 $string['signinanother'] = 'Not you? Reset your settings and cancel the export.';
+$string['requesttokenfailed'] = 'Failed to get the Evernote token from the current settings. Please check the Evernote Key and secret.';
+$string['failedtocreatenote'] = 'Failed to create Evernote note.';
+$string['failedlistingnotebooks'] = 'Failed to list Evernote notebooks.';
