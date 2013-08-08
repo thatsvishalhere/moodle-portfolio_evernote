@@ -219,13 +219,30 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
                     $htmlcontents = $file->get_content();
                     $this->enmlcontent = $this->getenml($htmlcontents);
                 } else {
-                    // For milestone 2.
+                    $htmlcontents = 'The export file has been attached';
+                    $this->enmlcontent = $this->getenml($htmlcontents);
+                    // Add the file as attachment after this.
                 }
             } else {
-                // For milestone 2.
+                $md5 = md5($file->get_content());
+                $filecontent = $file->get_content();
+                $mimetype = $file->get_mimetype();
+                $resourceattr = new ResourceAttributes (array(
+                'fileName' => $file->get_filename(),
+                'attachment' => true
+                ));
+                $data = new Data(array('bodyHash'=>$md5, 'body' => $filecontent));
+                $resource = new Resource (array(
+                    'data' => $data,
+                    'mime' => $mimetype,
+                    'attributes' => $resourceattr
+                ));
+                $this->resourcearray[] = $resource;
             }
         }
+        $this->build_attachments();
         $this->create_note();
+        $this->resourcearray = null;
         return true;
     }
 
@@ -263,7 +280,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
     }
 
     public function supported_formats() {
-        return array(/*PORTFOLIO_FORMAT_RICHHTML, */PORTFOLIO_FORMAT_PLAINHTML);
+        return array(PORTFOLIO_FORMAT_RICHHTML, PORTFOLIO_FORMAT_PLAINHTML);
     }
 
     public function steal_control($stage) {
@@ -402,7 +419,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $htmlcontents = $this->get_inner_html($elements);
         $enmlcontents = '<?xml version="1.0" encoding="UTF-8"?>' .
             '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">' .
-            '<en-note>'.$htmlcontents.'</en-note>';
+            '<en-note>'.$htmlcontents;
         return $enmlcontents;
     }
 
@@ -518,5 +535,15 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
             $this->userstore = new UserStoreClient($userstoreprotocol, $userstoreprotocol);
         }
         return $this->userstore;
+    }
+
+    protected function build_attachments() {
+        $md5 = "";
+        if (!empty($this->resourcearray)) {
+            foreach($this->resourcearray as $attachresource) {
+                $this->enmlcontent .= '<br />Attachment:<en-media type="'.$attachresource->mime.'" hash="'.$attachresource->data->bodyHash.'" />';
+            }
+        }
+        $this->enmlcontent .= '</en-note>';
     }
 }
