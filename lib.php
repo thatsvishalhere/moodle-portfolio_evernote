@@ -417,9 +417,10 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $elements = $dom->getElementsByTagName('body')->item(0);
         $elements = $this->reform_style_attribute($elements);
         $htmlcontents = $this->get_inner_html($elements);
-        $enmlcontents = '<?xml version="1.0" encoding="UTF-8"?>' .
+        /*$enmlcontents = '<?xml version="1.0" encoding="UTF-8"?>' .
             '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">' .
-            '<en-note>'.$htmlcontents;
+            '<en-note>'.$htmlcontents.'</en-note>';*/
+        $enmlcontents = $htmlcontents;
         return $enmlcontents;
     }
 
@@ -537,13 +538,78 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         return $this->userstore;
     }
 
+    /**
+     * Build the attachments on to the current enml code and finalize the content string
+     */
     protected function build_attachments() {
         $md5 = "";
+        $filenames = array();
         if (!empty($this->resourcearray)) {
             foreach($this->resourcearray as $attachresource) {
-                $this->enmlcontent .= '<br />Attachment:<en-media type="'.$attachresource->mime.'" hash="'.$attachresource->data->bodyHash.'" />';
+                //$this->enmlcontent .= '<br />Attachment:<en-media type="'.$attachresource->mime.'" hash="'.$attachresource->data->bodyHash.'" />';
+                $filenames[] = 'site_files/'.$attachresource->attributes->fileName;
+            }
+            $htmlcontents = '<body>'.$this->enmlcontent.'</body>';
+            $dom = new DOMDocument();
+            $dom->loadHTML($htmlcontents);
+            $elements = $dom->getElementsByTagName('body')->item(0);
+            $elements = $this->reform_attachments($dom, $elements,  $filenames);
+            $htmlcontents = $this->get_inner_html($elements);
+            $this->enmlcontent = '<?xml version="1.0" encoding="UTF-8"?>' .
+                '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">' .
+                '<en-note>'.$htmlcontents.'</en-note>';
+        } else {
+            $this->enmlcontent = '<?xml version="1.0" encoding="UTF-8"?>' .
+                '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">' .
+                '<en-note>'.$this->enmlcontent.'</en-note>';
+        }
+    }
+
+    /**
+     * Replace the embedded objects in enml and replace them with enml element
+     * with the required enml attributes
+     *
+     * @param DOMDocument $dom the main dom in which the enml code has been extracted from
+     * @param DOMElement $elements the element in which the embedded code needs to be introduced
+     * @param array $filenames the array in which the file names of the attachments are stored
+     * @return UserStoreClient object
+     */
+    protected function reform_attachments ($dom, $elements, $filenames) {
+        if(!empty($filenames)) {
+            if ($elements->childNodes!==null) {
+                $numchildnodes = $elements->childNodes->length;
+                for ($i=0; $i<$numchildnodes; $i++) {
+                    $element = $this->reform_attachments($dom, $elements->childNodes->item(0), $filenames);
+                    $elements->removeChild($elements->childNodes->item(0));
+                    $elements->appendChild($element);
+                }
+            }
+            $tempelement = null;
+            if($elements->attributes != null)
+            {
+                foreach ($elements->attributes as $attr) {
+                    $attrvalue = $attr->value;
+
+                    if (in_array($attrvalue, $filenames)) {
+                        $index = array_search($attrvalue, $filenames);
+                        $resource = $this->resourcearray[$index];
+                        $newelement = $dom->createElement('en-media');
+                        $typeattribute = $dom->createAttribute('type');
+                        $typeattribute->value = $resource->mime;
+                        $hashattribute = $dom->createAttribute('hash');
+                        $hashattribute->value = $resource->data->bodyHash;
+                        $newelement->appendChild($typeattribute);
+                        $newelement->appendChild($hashattribute);
+                        $elements->parentNode->replaceChild($newelement, $elements);
+                        $tempelement = $newelement;
+                        break;
+                    }
+                }
+            }
+            if($tempelement != null) {
+                $elements = $tempelement;
             }
         }
-        $this->enmlcontent .= '</en-note>';
+        return $elements;
     }
 }
