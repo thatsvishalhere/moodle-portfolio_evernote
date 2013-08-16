@@ -191,6 +191,8 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $mform->addElement('text', 'plugin_notetitle', get_string('customnotetitlelabel', 'portfolio_evernote'));
         $mform->setType('plugin_notetitle', PARAM_RAW);
         $mform->setDefault('plugin_notetitle', get_string('defaultnotetitle', 'portfolio_evernote'));
+        $mform->addElement('text', 'plugin_notetags', get_string('notetagslabel', 'portfolio_evernote'));
+        $mform->setType('plugin_notetags', PARAM_TEXT);
         $this->notebookarray = $this->list_notebooks();
         $notebookselect = $mform->addElement('select', 'plugin_notebooks', 'Select Notebook', $this->notebookarray);
         $notebookselect->setSelected($this->defaultnotebookguid);
@@ -201,11 +203,11 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
 
     public function get_export_summary() {
         return array('Evernote Username'=>$this->get_userstore()->getUser($this->accesstoken)->username, 'Note Title'=>s($this->get_export_config('notetitle')),
-            'Notebook'=>$this->notebookarray[$this->get_export_config('notebooks')]);
+            'Note Tags'=>$this->get_export_config('notetags'), 'Notebook'=>$this->notebookarray[$this->get_export_config('notebooks')]);
     }
 
     public function get_allowed_export_config() {
-        return array('notetitle', 'notebooks');
+        return array('notetitle', 'notebooks', 'notetags');
     }
 
     public function prepare_package() {
@@ -380,6 +382,14 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
     protected function create_note() {
         $note = new Note();
         $note->title = $this->get_export_config('notetitle');
+        $tags = $this->get_export_config('notetags');
+        if ($tags != "") {
+            $tagarray = explode(",", $tags);
+            for($i=0; $i<sizeof($tagarray); $i++) {
+                $tagarray[$i] = trim($tagarray[$i]);
+            }
+            $note->tagNames = $tagarray;
+        }
         $note->content = $this->enmlcontent;
         $note->resources = $this->resourcearray;
         $note->notebookGuid = $this->get_export_config('notebooks');

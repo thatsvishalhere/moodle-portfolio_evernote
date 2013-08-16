@@ -47,3 +47,4 @@ $string['requesttokenfailed'] = 'Failed to get the Evernote token from the curre
 $string['failedtocreatenote'] = 'Failed to create Evernote note.';
 $string['failedlistingnotebooks'] = 'Failed to list Evernote notebooks.';
 $string['fileexportstatement'] = 'The export file has been attached.';
+$string['notetagslabel'] = 'Note tags (Comma separated)';
