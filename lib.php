@@ -219,13 +219,28 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
                     $htmlcontents = $file->get_content();
                     $this->enmlcontent = $this->getenml($htmlcontents);
                 } else {
-                    $htmlcontents = 'The export file has been attached';
+                    $htmlcontents = get_string('fileexportstatement', 'portfolio_evernote');
                     $this->enmlcontent = $this->getenml($htmlcontents);
                     // Add the file as attachment after this.
+                    $filecontent = $file->get_content();
+                    $md5 = md5($filecontent);
+                    $mimetype = $file->get_mimetype();
+                    $resourceattr = new ResourceAttributes (array(
+                    'fileName' => $file->get_filename(),
+                    'attachment' => true
+                    ));
+                    $data = new Data(array('bodyHash'=>$md5, 'body' => $filecontent));
+                    $resource = new Resource (array(
+                        'data' => $data,
+                        'mime' => $mimetype,
+                        'attributes' => $resourceattr
+                    ));
+                    $this->enmlcontent .= "<en-media type=\"$mimetype\" hash=\"$md5\" />";
+                    $this->resourcearray[] = $resource;
                 }
             } else {
-                $md5 = md5($file->get_content());
                 $filecontent = $file->get_content();
+                $md5 = md5($filecontent);
                 $mimetype = $file->get_mimetype();
                 $resourceattr = new ResourceAttributes (array(
                 'fileName' => $file->get_filename(),
@@ -280,7 +295,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
     }
 
     public function supported_formats() {
-        return array(PORTFOLIO_FORMAT_RICHHTML, PORTFOLIO_FORMAT_PLAINHTML);
+        return array(PORTFOLIO_FORMAT_RICHHTML, PORTFOLIO_FORMAT_PLAINHTML, PORTFOLIO_FORMAT_FILE);
     }
 
     public function steal_control($stage) {
@@ -412,14 +427,13 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $htmlcontents = str_replace("<br/ >","",$htmlcontents);
         // Removing the disallowed attributes.
         $htmlcontents = '<body>'.$htmlcontents.'</body>';
+        libxml_use_internal_errors(true);
         $dom = new DOMDocument();
         $dom->loadHTML($htmlcontents);
+        libxml_use_internal_errors(false);
         $elements = $dom->getElementsByTagName('body')->item(0);
         $elements = $this->reform_style_attribute($elements);
         $htmlcontents = $this->get_inner_html($elements);
-        /*$enmlcontents = '<?xml version="1.0" encoding="UTF-8"?>' .
-            '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">' .
-            '<en-note>'.$htmlcontents.'</en-note>';*/
         $enmlcontents = $htmlcontents;
         return $enmlcontents;
     }
@@ -531,6 +545,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
                     $parts['port'] = 80;
                 }
             }
+            print_r($parts);
             $userstorehttpclient = new THttpClient($parts['host'], $parts['port'], $parts['path'], $parts['scheme']);
             $userstoreprotocol = new TBinaryProtocol($userstorehttpclient);
             $this->userstore = new UserStoreClient($userstoreprotocol, $userstoreprotocol);
@@ -542,16 +557,16 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      * Build the attachments on to the current enml code and finalize the content string
      */
     protected function build_attachments() {
-        $md5 = "";
         $filenames = array();
         if (!empty($this->resourcearray)) {
             foreach($this->resourcearray as $attachresource) {
-                //$this->enmlcontent .= '<br />Attachment:<en-media type="'.$attachresource->mime.'" hash="'.$attachresource->data->bodyHash.'" />';
                 $filenames[] = 'site_files/'.$attachresource->attributes->fileName;
             }
             $htmlcontents = '<body>'.$this->enmlcontent.'</body>';
+            libxml_use_internal_errors(true);
             $dom = new DOMDocument();
             $dom->loadHTML($htmlcontents);
+            libxml_use_internal_errors(false);
             $elements = $dom->getElementsByTagName('body')->item(0);
             $elements = $this->reform_attachments($dom, $elements,  $filenames);
             $htmlcontents = $this->get_inner_html($elements);
