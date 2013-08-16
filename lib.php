@@ -189,6 +189,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $mform->addElement('static', 'plugin_username', 'Evernote User account ', $user->username);
         $mform->addElement('static', 'plugin_signinusername', '', '<a href="'.$returnurl.'">'.get_string('signinanother','portfolio_evernote').'</a>');
         $mform->addElement('text', 'plugin_notetitle', get_string('customnotetitlelabel', 'portfolio_evernote'));
+        $mform->setType('plugin_notetitle', PARAM_RAW);
         $mform->setDefault('plugin_notetitle', get_string('defaultnotetitle', 'portfolio_evernote'));
         $this->notebookarray = $this->list_notebooks();
         $notebookselect = $mform->addElement('select', 'plugin_notebooks', 'Select Notebook', $this->notebookarray);
