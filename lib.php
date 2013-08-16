@@ -546,7 +546,6 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
                     $parts['port'] = 80;
                 }
             }
-            print_r($parts);
             $userstorehttpclient = new THttpClient($parts['host'], $parts['port'], $parts['path'], $parts['scheme']);
             $userstoreprotocol = new TBinaryProtocol($userstorehttpclient);
             $this->userstore = new UserStoreClient($userstoreprotocol, $userstoreprotocol);
