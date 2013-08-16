@@ -219,7 +219,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         foreach ($files as $file) {
             if ($file->get_filepath() == "/") {
                 if ($file->get_mimetype()=='text/html') {
-                    $htmlcontents = $file->get_content();
+                    $htmlcontents = iconv ("UTF-8", "ASCII//TRANSLIT", $file->get_content());
                     $this->enmlcontent = $this->getenml($htmlcontents);
                 } else {
                     $htmlcontents = get_string('fileexportstatement', 'portfolio_evernote');
