@@ -29,6 +29,7 @@ require_once($CFG->libdir.'/portfolio/plugin.php');
 require_once($CFG->libdir . '/oauthlib.php');
 require_once( __DIR__ .'/lib/evernote/Evernote/Client.php');
 require_once( __DIR__ .'/lib/evernote/packages/Types/Types_types.php');
+require_once( __DIR__ .'/lib/Moodle_THttpClient.php');
 
 // Import the classes that we're going to be using.
 use EDAM\Error\EDAMSystemException,
@@ -533,7 +534,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
                     $parts['port'] = 80;
                 }
             }
-            $notestorehttpclient = new THttpClient($parts['host'], $parts['port'], $parts['path'], $parts['scheme']);
+            $notestorehttpclient = new Moodle_THttpClient($parts['host'], $parts['port'], $parts['path'], $parts['scheme']);
             $notestoreprotocol = new TBinaryProtocol($notestorehttpclient);
             $this->notestore = new NoteStoreClient($notestoreprotocol, $notestoreprotocol);
         }
@@ -556,7 +557,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
                     $parts['port'] = 80;
                 }
             }
-            $userstorehttpclient = new THttpClient($parts['host'], $parts['port'], $parts['path'], $parts['scheme']);
+            $userstorehttpclient = new Moodle_THttpClient($parts['host'], $parts['port'], $parts['path'], $parts['scheme']);
             $userstoreprotocol = new TBinaryProtocol($userstorehttpclient);
             $this->userstore = new UserStoreClient($userstoreprotocol, $userstoreprotocol);
         }
