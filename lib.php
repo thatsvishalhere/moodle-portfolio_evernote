@@ -417,8 +417,14 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
                 if ($notebook->defaultNotebook) {
                     $this->defaultnotebookguid = $notebook->guid;
                     $notebookarray[$notebook->guid] = get_string('denotedefaultnotebook', 'portfolio_evernote', $notebook->name);
+                    if(!empty($notebook->stack)) {
+                        $notebookarray[$notebook->guid] .= get_string('denotestack', 'portfolio_evernote', $notebook->stack);
+                    }
                 } else {
                     $notebookarray[$notebook->guid] = $notebook->name;
+                    if(!empty($notebook->stack)) {
+                        $notebookarray[$notebook->guid] .= get_string('denotestack', 'portfolio_evernote', $notebook->stack);
+                    }
                 }
             }
         }
