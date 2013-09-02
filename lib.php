@@ -109,7 +109,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      * The evernote markup language content that is to be shown in the notebook.
      * @var string
      */
-    private $enmlcontent;
+    private $enmlcontent = "";
 
     /**
      * Notebooks in the Evernote account of the user.
@@ -217,14 +217,15 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
 
     public function send_package() {
         $files = $this->exporter->get_tempfiles();
+        $exportformat = $this->exporter->get('formatclass');
         foreach ($files as $file) {
             if ($file->get_filepath() == "/") {
-                if ($file->get_mimetype()=='text/html') {
+                if ($file->get_mimetype()=='text/html' && $exportformat != PORTFOLIO_FORMAT_FILE) {
                     $htmlcontents = iconv ("UTF-8", "ASCII//TRANSLIT", $file->get_content());
-                    $this->enmlcontent = $this->getenml($htmlcontents);
+                    $this->enmlcontent .= $this->getenml($htmlcontents);
                 } else {
-                    $htmlcontents = get_string('fileexportstatement', 'portfolio_evernote');
-                    $this->enmlcontent = $this->getenml($htmlcontents);
+                    $htmlcontents = "";
+                    $this->enmlcontent .= '<br />'.$this->getenml($htmlcontents);
                     // Add the file as attachment after this.
                     $filecontent = $file->get_content();
                     $md5 = md5($filecontent);
