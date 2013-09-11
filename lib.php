@@ -27,9 +27,32 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir.'/portfolio/plugin.php');
 require_once($CFG->libdir . '/oauthlib.php');
-require_once( __DIR__ .'/lib/evernote/Evernote/Client.php');
-require_once( __DIR__ .'/lib/evernote/packages/Types/Types_types.php');
-require_once( __DIR__ .'/lib/Moodle_THttpClient.php');
+
+// To allow coexistence of any other plugin having Evernote API.
+if (!isset($GLOBALS['THRIFT_ROOT'])) {
+    $GLOBALS['THRIFT_ROOT'] = __DIR__ . '/lib/evernote';
+}
+if (!class_exists('TException')) {
+    require_once($GLOBALS['THRIFT_ROOT'] . '/Thrift.php');
+}
+if (!class_exists('THttpClient')) {
+    require_once($GLOBALS['THRIFT_ROOT'] . '/transport/THttpClient.php');
+}
+if (!class_exists('TBinaryProtocol')) {
+    require_once($GLOBALS['THRIFT_ROOT'] . '/protocol/TBinaryProtocol.php');
+}
+if (!class_exists('\EDAM\NoteStore\NoteStoreClient')) {
+    require_once($GLOBALS['THRIFT_ROOT'] . '/packages/NoteStore/NoteStore.php');
+}
+if (!class_exists('\EDAM\UserStore\UserStore')) {
+    require_once($GLOBALS['THRIFT_ROOT'] . '/packages/UserStore/UserStore.php');
+}
+if (!class_exists('\EDAM\Types\NoteSortOrder')) {
+    require_once($GLOBALS['THRIFT_ROOT'] . '/packages/Types/Types_types.php');
+}
+if (!class_exists('Moodle_THttpClient')) {
+    require_once( __DIR__ .'/lib/Moodle_THttpClient.php');
+}
 
 // Import the classes that we're going to be using.
 use EDAM\Error\EDAMSystemException,
