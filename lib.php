@@ -227,7 +227,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         }
         $user = $this->get_userstore()->getUser($this->accesstoken);
         $this->evernoteuser = $user->username;
-        $mform->addElement('static', 'plugin_username', 'Evernote User account ', $user->username);
+        $mform->addElement('static', 'plugin_username', 'Evernote User account ', $this->evernoteuser);
         $mform->addElement('static', 'plugin_signinusername', '', html_writer::link($returnurl,get_string('signinanother','portfolio_evernote')));
         $mform->addElement('text', 'plugin_notetitle', get_string('customnotetitlelabel', 'portfolio_evernote'));
         $mform->setType('plugin_notetitle', PARAM_RAW);
