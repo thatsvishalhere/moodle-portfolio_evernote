@@ -73,7 +73,7 @@ use EDAM\Types\Resource;
 use EDAM\Types\ResourceAttributes;
 use EDAM\Types\Data;
 
-// Import Userstore
+// Import Userstore.
 use EDAM\Userstore\UserStoreClient;
 
 /**
@@ -186,7 +186,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      * @param int $instanceid id of plugin instance to construct
      * @param mixed $record stdclass object or named array - use this if you already have the record to avoid another query
      */
-    function __construct($instanceid, $record=null) {
+    public function __construct($instanceid, $record=null) {
         parent::__construct($instanceid, $record);
 
         $this->accesstoken = get_user_preferences(self::SETTING_PREFIX.'accesstoken', null);
@@ -216,8 +216,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $returnurl->param('signin', 1);
 
         // If the user wants to sign into another account, cancel the export and reset the variables.
-        if($signin)
-        {
+        if ($signin) {
             set_user_preference(self::SETTING_PREFIX.'tokensecret', '');
             set_user_preference(self::SETTING_PREFIX.'accesstoken', '');
             set_user_preference(self::SETTING_PREFIX.'notestoreurl', '');
@@ -228,7 +227,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $user = $this->get_userstore()->getUser($this->accesstoken);
         $this->evernoteuser = $user->username;
         $mform->addElement('static', 'plugin_username', 'Evernote User account ', $this->evernoteuser);
-        $mform->addElement('static', 'plugin_signinusername', '', html_writer::link($returnurl,get_string('signinanother','portfolio_evernote')));
+        $mform->addElement('static', 'plugin_signinusername', '', html_writer::link($returnurl, get_string('signinanother', 'portfolio_evernote')));
         $mform->addElement('text', 'plugin_notetitle', get_string('customnotetitlelabel', 'portfolio_evernote'));
         $mform->setType('plugin_notetitle', PARAM_RAW);
         $mform->setDefault('plugin_notetitle', get_string('defaultnotetitle', 'portfolio_evernote'));
@@ -284,7 +283,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
                     $this->enmlcontent .= "<en-media type=\"$mimetype\" hash=\"$md5\" />";
                     $this->resourcearray[] = $resource;
                 }
-            } else {                
+            } else {
                 $md5 = md5($filecontent);
                 $resourceattr = new ResourceAttributes (array(
                 'fileName' => $file->get_filename(),
@@ -400,9 +399,8 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $verifier  = optional_param('oauth_verifier', '', PARAM_TEXT);
         $secret = get_user_preferences(self::SETTING_PREFIX.'tokensecret', '');
 
-        // Set the user variables if the user grants access, else reset the values. 
-        if ($verifier != null)
-        {
+        // Set the user variables if the user grants access, else reset the values.
+        if ($verifier != null) {
             $access = $this->get_oauth()->get_access_token($token, $secret, $verifier);
             $this->test = $access;
             $notestore  = $access['edam_noteStoreUrl'];
@@ -428,7 +426,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $tags = $this->get_export_config('notetags');
         if ($tags != "") {
             $tagarray = explode(",", $tags);
-            for($i=0; $i<sizeof($tagarray); $i++) {
+            for ($i=0; $i<count($tagarray); $i++) {
                 $tagarray[$i] = trim($tagarray[$i]);
             }
             $note->tagNames = $tagarray;
@@ -439,7 +437,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         try {
             $notebooks = $this->get_notestore()->createNote($this->accesstoken, $note);
         } catch (Exception $e) {
-            throw new portfolio_plugin_exception('failedtocreatenote','portfolio_evernote');
+            throw new portfolio_plugin_exception('failedtocreatenote', 'portfolio_evernote');
         }
     }
 
@@ -459,12 +457,12 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
                 if ($notebook->defaultNotebook) {
                     $this->defaultnotebookguid = $notebook->guid;
                     $notebookarray[$notebook->guid] = get_string('denotedefaultnotebook', 'portfolio_evernote', $notebook->name);
-                    if(!empty($notebook->stack)) {
+                    if (!empty($notebook->stack)) {
                         $notebookarray[$notebook->guid] .= get_string('denotestack', 'portfolio_evernote', $notebook->stack);
                     }
                 } else {
                     $notebookarray[$notebook->guid] = $notebook->name;
-                    if(!empty($notebook->stack)) {
+                    if (!empty($notebook->stack)) {
                         $notebookarray[$notebook->guid] .= get_string('denotestack', 'portfolio_evernote', $notebook->stack);
                     }
                 }
@@ -484,7 +482,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
             '<center><cite><code><col><colgroup><dd><del><dfn><div><dl><dt><em><font><h1><h2><h3><h4><h5><h6><hr><i><img><ins>'.
             '<kbd><li><map><ol><p><pre><q><s><samp><small><span><strike><strong><sub><sup><table><tbody><td><tfoot><th><thead>'.
             '<title><tr><tt><u><ul><var><xmp>');
-        $htmlcontents = str_replace("<br/ >","",$htmlcontents);
+        $htmlcontents = str_replace("<br/ >", "", $htmlcontents);
         // Removing the disallowed attributes.
         $htmlcontents = '<body>'.$htmlcontents.'</body>';
         libxml_use_internal_errors(true);
@@ -534,7 +532,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
             foreach ($elements->attributes as $attr) {
                 $attrname = strtolower($attr->nodeName);
 
-                // Removing all the banned attributes along with 
+                // Removing all the banned attributes along with
                 // all the attributes starting with 'on'.
                 if (in_array($attrname, $bannedattributes) || strpos($attrname, 'on') === 0) {
                     $elements->removeAttribute($attr->nodeName);
@@ -599,10 +597,10 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      * @return UserStoreClient object
      */
     protected function get_userstore() {
-        $test = $this->get_config('usedevapi');
-            if (!empty($test)) {
-                $this->api = self::API_DEV;
-            }
+        $usedevflag = $this->get_config('usedevapi');
+        if (!empty($usedevflag)) {
+            $this->api = self::API_DEV;
+        }
         $url = $this->api."/edam/user";
         if (empty($this->userstore)) {
             $parts = parse_url($url);
@@ -626,7 +624,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
     protected function build_attachments() {
         $filenames = array();
         if (!empty($this->resourcearray)) {
-            foreach($this->resourcearray as $attachresource) {
+            foreach ($this->resourcearray as $attachresource) {
                 $filenames[] = 'site_files/'.$attachresource->attributes->fileName;
             }
             $htmlcontents = '<body>'.$this->enmlcontent.'</body>';
@@ -635,7 +633,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
             $dom->loadHTML('<?xml encoding="UTF-8">'.$htmlcontents);
             libxml_use_internal_errors(false);
             $elements = $dom->getElementsByTagName('body')->item(0);
-            $elements = self::reform_attachments($dom, $elements,  $filenames);
+            $elements = $this->reform_attachments($dom, $elements,  $filenames);
             $htmlcontents = self::get_inner_html($elements);
             $this->enmlcontent = '<?xml version="1.0" encoding="UTF-8"?>' .
                 '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">' .
@@ -656,19 +654,18 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      * @param array $filenames the array in which the file names of the attachments are stored
      * @return UserStoreClient object
      */
-    protected static function reform_attachments ($dom, $elements, $filenames) {
-        if(!empty($filenames)) {
+    protected function reform_attachments ($dom, $elements, $filenames) {
+        if (!empty($filenames)) {
             if ($elements->childNodes!==null) {
                 $numchildnodes = $elements->childNodes->length;
                 for ($i=0; $i<$numchildnodes; $i++) {
-                    $element = self::reform_attachments($dom, $elements->childNodes->item(0), $filenames);
+                    $element = $this->reform_attachments($dom, $elements->childNodes->item(0), $filenames);
                     $elements->removeChild($elements->childNodes->item(0));
                     $elements->appendChild($element);
                 }
             }
             $tempelement = null;
-            if($elements->attributes != null)
-            {
+            if ($elements->attributes != null) {
                 foreach ($elements->attributes as $attr) {
                     $attrvalue = $attr->value;
 
@@ -688,7 +685,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
                     }
                 }
             }
-            if($tempelement != null) {
+            if ($tempelement != null) {
                 $elements = $tempelement;
             }
         }
