@@ -25,7 +25,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2013091203;        // The current plugin version (Date: YYYYMMDDXX).
+$plugin->version   = 2013091204;        // The current plugin version (Date: YYYYMMDDXX).
 $plugin->requires  = 2012062500;        // Requires this Moodle version.
 $plugin->component = 'portfolio_evernote'; // Full name of the plugin (used for diagnostics).
 $plugin->cron      = 0;

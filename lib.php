@@ -175,6 +175,12 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
     protected $resourcearray = array();
 
     /**
+     * Evernote Username of the user
+     * @var string
+     */
+    protected $evernoteuser;
+
+    /**
      * Constructor
      *
      * @param int $instanceid id of plugin instance to construct
@@ -220,6 +226,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
             redirect($returnurl);
         }
         $user = $this->get_userstore()->getUser($this->accesstoken);
+        $this->evernoteuser = $user->username;
         $mform->addElement('static', 'plugin_username', 'Evernote User account ', $user->username);
         $mform->addElement('static', 'plugin_signinusername', '', html_writer::link($returnurl,get_string('signinanother','portfolio_evernote')));
         $mform->addElement('text', 'plugin_notetitle', get_string('customnotetitlelabel', 'portfolio_evernote'));
@@ -236,7 +243,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
     }
 
     public function get_export_summary() {
-        return array('Evernote Username'=>$this->get_userstore()->getUser($this->accesstoken)->username, 'Note Title'=>s($this->get_export_config('notetitle')),
+        return array('Evernote Username'=>$this->evernoteuser, 'Note Title'=>s($this->get_export_config('notetitle')),
             'Note Tags'=>$this->get_export_config('notetags'), 'Notebook'=>$this->notebookarray[$this->get_export_config('notebooks')]);
     }
 
