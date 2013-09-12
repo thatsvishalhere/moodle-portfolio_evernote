@@ -221,7 +221,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         }
         $user = $this->get_userstore()->getUser($this->accesstoken);
         $mform->addElement('static', 'plugin_username', 'Evernote User account ', $user->username);
-        $mform->addElement('static', 'plugin_signinusername', '', '<a href="'.$returnurl.'">'.get_string('signinanother','portfolio_evernote').'</a>');
+        $mform->addElement('static', 'plugin_signinusername', '', html_writer::link($returnurl,get_string('signinanother','portfolio_evernote')));
         $mform->addElement('text', 'plugin_notetitle', get_string('customnotetitlelabel', 'portfolio_evernote'));
         $mform->setType('plugin_notetitle', PARAM_RAW);
         $mform->setDefault('plugin_notetitle', get_string('defaultnotetitle', 'portfolio_evernote'));
@@ -252,17 +252,18 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $files = $this->exporter->get_tempfiles();
         $exportformat = $this->exporter->get('formatclass');
         foreach ($files as $file) {
+            $filecontent = $file->get_content();
+            $mimetype = $file->get_mimetype();
+
             if ($file->get_filepath() == "/") {
-                if ($file->get_mimetype()=='text/html' && $exportformat != PORTFOLIO_FORMAT_FILE) {
-                    $htmlcontents = $file->get_content();
-                    $this->enmlcontent .= $this->getenml($htmlcontents);
+                if ($mimetype == 'text/html' && $exportformat != PORTFOLIO_FORMAT_FILE) {
+                    $htmlcontents = $filecontent;
+                    $this->enmlcontent .= self::getenml($htmlcontents);
                 } else {
                     $htmlcontents = "";
-                    $this->enmlcontent .= '<br />'.$this->getenml($htmlcontents);
+                    $this->enmlcontent .= '<br />'. self::getenml($htmlcontents);
                     // Add the file as attachment after this.
-                    $filecontent = $file->get_content();
                     $md5 = md5($filecontent);
-                    $mimetype = $file->get_mimetype();
                     $resourceattr = new ResourceAttributes (array(
                     'fileName' => $file->get_filename(),
                     'attachment' => true
@@ -276,10 +277,8 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
                     $this->enmlcontent .= "<en-media type=\"$mimetype\" hash=\"$md5\" />";
                     $this->resourcearray[] = $resource;
                 }
-            } else {
-                $filecontent = $file->get_content();
+            } else {                
                 $md5 = md5($filecontent);
-                $mimetype = $file->get_mimetype();
                 $resourceattr = new ResourceAttributes (array(
                 'fileName' => $file->get_filename(),
                 'attachment' => true
@@ -473,7 +472,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      * @param string $htmlcontents HTML string that is needed to convert to ENML.
      * @return string  ENML string of the given HTML string.
      */
-    protected function getenml($htmlcontents) {
+    protected static function getenml($htmlcontents) {
         $htmlcontents = strip_tags($htmlcontents, '<a><abbr><acronym><address><area><b><bdo><big><blockquote><br><caption>'.
             '<center><cite><code><col><colgroup><dd><del><dfn><div><dl><dt><em><font><h1><h2><h3><h4><h5><h6><hr><i><img><ins>'.
             '<kbd><li><map><ol><p><pre><q><s><samp><small><span><strike><strong><sub><sup><table><tbody><td><tfoot><th><thead>'.
@@ -486,8 +485,8 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $dom->loadHTML('<?xml encoding="UTF-8">'.$htmlcontents);
         libxml_use_internal_errors(false);
         $elements = $dom->getElementsByTagName('body')->item(0);
-        $elements = $this->reform_style_attribute($elements);
-        $htmlcontents = $this->get_inner_html($elements);
+        $elements = self::reform_style_attribute($elements);
+        $htmlcontents = self::get_inner_html($elements);
         $enmlcontents = $htmlcontents;
         return $enmlcontents;
     }
@@ -498,7 +497,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      * @param DOM element $node for which we need the inner html.
      * @return string of the inner html of the DOM element given.
      */
-    protected function get_inner_html( $node ) {
+    protected static function get_inner_html( $node ) {
         $innerhtml= '';
         if ($node->childNodes!==null) {
             $children = $node->childNodes;
@@ -515,11 +514,11 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      * @param DOM element $elements
      * @return DOM element without the unsupported attributes and the necessary font effects retained by modifying the inner html.
      */
-    protected function reform_style_attribute ($elements) {
+    protected static function reform_style_attribute ($elements) {
         if ($elements->childNodes!==null) {
             $numchildnodes = $elements->childNodes->length;
             for ($i=0; $i<$numchildnodes; $i++) {
-                $element = $this->reform_style_attribute($elements->childNodes->item(0));
+                $element = self::reform_style_attribute($elements->childNodes->item(0));
                 $elements->removeChild($elements->childNodes->item(0));
                 $elements->appendChild($element);
             }
@@ -629,8 +628,8 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
             $dom->loadHTML('<?xml encoding="UTF-8">'.$htmlcontents);
             libxml_use_internal_errors(false);
             $elements = $dom->getElementsByTagName('body')->item(0);
-            $elements = $this->reform_attachments($dom, $elements,  $filenames);
-            $htmlcontents = $this->get_inner_html($elements);
+            $elements = self::reform_attachments($dom, $elements,  $filenames);
+            $htmlcontents = self::get_inner_html($elements);
             $this->enmlcontent = '<?xml version="1.0" encoding="UTF-8"?>' .
                 '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">' .
                 '<en-note>'.$htmlcontents.'</en-note>';
@@ -650,12 +649,12 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      * @param array $filenames the array in which the file names of the attachments are stored
      * @return UserStoreClient object
      */
-    protected function reform_attachments ($dom, $elements, $filenames) {
+    protected static function reform_attachments ($dom, $elements, $filenames) {
         if(!empty($filenames)) {
             if ($elements->childNodes!==null) {
                 $numchildnodes = $elements->childNodes->length;
                 for ($i=0; $i<$numchildnodes; $i++) {
-                    $element = $this->reform_attachments($dom, $elements->childNodes->item(0), $filenames);
+                    $element = self::reform_attachments($dom, $elements->childNodes->item(0), $filenames);
                     $elements->removeChild($elements->childNodes->item(0));
                     $elements->appendChild($element);
                 }
