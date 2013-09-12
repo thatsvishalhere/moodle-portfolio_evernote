@@ -244,7 +244,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         foreach ($files as $file) {
             if ($file->get_filepath() == "/") {
                 if ($file->get_mimetype()=='text/html' && $exportformat != PORTFOLIO_FORMAT_FILE) {
-                    $htmlcontents = iconv ("UTF-8", "ASCII//TRANSLIT", $file->get_content());
+                    $htmlcontents = $file->get_content();
                     $this->enmlcontent .= $this->getenml($htmlcontents);
                 } else {
                     $htmlcontents = "";
@@ -471,7 +471,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $htmlcontents = '<body>'.$htmlcontents.'</body>';
         libxml_use_internal_errors(true);
         $dom = new DOMDocument();
-        $dom->loadHTML($htmlcontents);
+        $dom->loadHTML('<?xml encoding="UTF-8">'.$htmlcontents);
         libxml_use_internal_errors(false);
         $elements = $dom->getElementsByTagName('body')->item(0);
         $elements = $this->reform_style_attribute($elements);
@@ -519,7 +519,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
                 // Removing all the banned attributes along with 
                 // all the attributes starting with 'on'.
                 if (in_array($attrname, $bannedattributes) || strpos($attrname, 'on') === 0) {
-                    $elements->removeAttribute($attrname);
+                    $elements->removeAttribute($attr->nodeName);
                 }
             }
         }
@@ -606,7 +606,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
             $htmlcontents = '<body>'.$this->enmlcontent.'</body>';
             libxml_use_internal_errors(true);
             $dom = new DOMDocument();
-            $dom->loadHTML($htmlcontents);
+            $dom->loadHTML('<?xml encoding="UTF-8">'.$htmlcontents);
             libxml_use_internal_errors(false);
             $elements = $dom->getElementsByTagName('body')->item(0);
             $elements = $this->reform_attachments($dom, $elements,  $filenames);
