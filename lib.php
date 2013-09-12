@@ -91,78 +91,88 @@ use EDAM\Userstore\UserStoreClient;
 class portfolio_plugin_evernote extends portfolio_plugin_push_base {
 
     /**
-     * URL to the API.
-     * Production services: https://www.evernote.com
-     * Development services: https://sandbox.evernote.com
+     * URL to the API production services.
      * @var string
      */
-    private $api = 'https://sandbox.evernote.com';
+    const API_PROD = 'https://www.evernote.com';
 
     /**
-     * The oauth_helper for oauth authentication of Evernote.
-     * @var oauth_helper
-     */
-    private $oauth;
-
-    /**
-     * Note store URL retrieved after the user authenticates the application.
+     * URL to the API development services.
      * @var string
      */
-    private $notestoreurl = null;
-
-    /**
-     * Notestore of the user.
-     * @var NoteStoreClient
-     */
-    private $notestore;
+    const API_DEV = 'https://sandbox.evernote.com';
 
     /**
      * Prefix for the user preferences.
      * @var string
      */
-    private $settingprefix = 'portfolio_evernote_';
+    const SETTING_PREFIX = 'portfolio_evernote_';
+
+    /**
+     * URL to the API.
+     * @var string
+     */
+    protected $api = self::API_PROD;
+
+    /**
+     * The oauth_helper for oauth authentication of Evernote.
+     * @var oauth_helper
+     */
+    protected $oauth;
+
+    /**
+     * Note store URL retrieved after the user authenticates the application.
+     * @var string
+     */
+    protected $notestoreurl = null;
+
+    /**
+     * Notestore of the user.
+     * @var NoteStoreClient
+     */
+    protected $notestore;
 
     /**
      * Token received after a valid OAuth authentication.
      * @var string
      */
-    private $accesstoken = null;
+    protected $accesstoken = null;
 
     /**
      * The evernote markup language content that is to be shown in the notebook.
      * @var string
      */
-    private $enmlcontent = "";
+    protected $enmlcontent = "";
 
     /**
      * Notebooks in the Evernote account of the user.
      * @var array
      */
-    private $notebookarray;
+    protected $notebookarray;
 
     /**
      * The user's default notebook guid.
      * @var string
      */
-    private $defaultnotebookguid;
+    protected $defaultnotebookguid;
 
     /**
      * Sandbox flag. Turn it to false for production.
      * @var boolean
      */
-    private $sandboxflag = true;
+    protected $sandboxflag = true;
 
     /**
      * Authorization URL of evernote.
      * @var string
      */
-    private $authorizeurl;
+    protected $authorizeurl;
 
     /**
      * Resource array of the note
      * @var boolean
      */
-    private $resourcearray = array();
+    protected $resourcearray = array();
 
     /**
      * Constructor
@@ -173,8 +183,8 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
     function __construct($instanceid, $record=null) {
         parent::__construct($instanceid, $record);
 
-        $this->accesstoken = get_user_preferences($this->settingprefix.'accesstoken', null);
-        $this->notestoreurl = get_user_preferences($this->settingprefix.'notestoreurl', null);
+        $this->accesstoken = get_user_preferences(self::SETTING_PREFIX.'accesstoken', null);
+        $this->notestoreurl = get_user_preferences(self::SETTING_PREFIX.'notestoreurl', null);
     }
 
     public static function allows_multiple_exports() {
@@ -202,9 +212,9 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         // If the user wants to sign into another account, cancel the export and reset the variables.
         if($signin)
         {
-            set_user_preference($this->settingprefix.'tokensecret', '');
-            set_user_preference($this->settingprefix.'accesstoken', '');
-            set_user_preference($this->settingprefix.'notestoreurl', '');
+            set_user_preference(self::SETTING_PREFIX.'tokensecret', '');
+            set_user_preference(self::SETTING_PREFIX.'accesstoken', '');
+            set_user_preference(self::SETTING_PREFIX.'notestoreurl', '');
             $returnurl->param('cancel', 1);
             $returnurl->param('cancelsure', 1);
             redirect($returnurl);
@@ -305,6 +315,8 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
 
     public static function admin_config_form(&$mform) {
         $mform->addElement('static', null, '', get_string('oauthinfo', 'portfolio_evernote'));
+        $mform->addElement('selectyesno', 'usedevapi', get_string('usedevapi', 'portfolio_evernote'), 0);
+        $mform->addElement('static', '', '', get_string('usedevapi_info', 'portfolio_evernote'));
         $mform->addElement('text', 'consumerkey', get_string('consumerkey', 'portfolio_evernote'));
         $mform->setType('consumerkey', PARAM_RAW_TRIMMED);
         $mform->addElement('text', 'secret', get_string('secret', 'portfolio_evernote'));
@@ -315,7 +327,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
     }
 
     public static function get_allowed_config() {
-        return array('consumerkey', 'secret');
+        return array('consumerkey', 'secret', 'usedevapi');
     }
 
     public static function allows_multiple_instances() {
@@ -361,15 +373,15 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
     /**
      * To get the token by verifying the Evernote API Consumer key and Secret
      */
-    private function get_token_from_config() {
+    protected function get_token_from_config() {
         $result = $this->get_oauth()->request_token();
         $this->authorizeurl = $result['authorize_url'];
         try {
             $user = $this->get_userstore()->getUser($this->accesstoken);
         } catch (Exception $e) {
             // If there is an exception or the user has not yet signed in, redirect to the authorization page.
-            set_user_preference($this->settingprefix.'tokensecret', $result['oauth_token_secret']);
-            set_user_preference($this->settingprefix.'accesstoken', '');
+            set_user_preference(self::SETTING_PREFIX.'tokensecret', $result['oauth_token_secret']);
+            set_user_preference(self::SETTING_PREFIX.'accesstoken', '');
             redirect($this->authorizeurl);
         }
     }
@@ -377,10 +389,10 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
     /**
      * To get the token for the user after the user has granted access to his Evernote account.
      */
-    private function get_token_credentials() {
+    protected function get_token_credentials() {
         $token  = optional_param('oauth_token', '', PARAM_TEXT);
         $verifier  = optional_param('oauth_verifier', '', PARAM_TEXT);
-        $secret = get_user_preferences($this->settingprefix.'tokensecret', '');
+        $secret = get_user_preferences(self::SETTING_PREFIX.'tokensecret', '');
 
         // Set the user variables if the user grants access, else reset the values. 
         if ($verifier != null)
@@ -392,11 +404,11 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
             $accesstoken  = $access['oauth_token'];
             $this->accesstoken = $accesstoken;
             $this->notestoreurl = $notestore;
-            set_user_preference($this->settingprefix.'accesstoken', $accesstoken);
-            set_user_preference($this->settingprefix.'notestoreurl', $notestore);
-            set_user_preference($this->settingprefix.'userid', $userid);
+            set_user_preference(self::SETTING_PREFIX.'accesstoken', $accesstoken);
+            set_user_preference(self::SETTING_PREFIX.'notestoreurl', $notestore);
+            set_user_preference(self::SETTING_PREFIX.'userid', $userid);
         } else {
-            set_user_preference($this->settingprefix.'tokensecret', '');
+            set_user_preference(self::SETTING_PREFIX.'tokensecret', '');
             throw new portfolio_plugin_exception('nopermission', 'portfolio_evernote');
         }
     }
@@ -531,8 +543,12 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      *
      * @return oauth_helper object.
      */
-    private function get_oauth() {
+    protected function get_oauth() {
         if (empty($this->oauth)) {
+            $test = $this->get_config('usedevapi');
+            if (!empty($test)) {
+                $this->api = self::API_DEV;
+            }
             $callbackurl = new moodle_url('/portfolio/add.php', array(
                     'postcontrol' => '1',
                     'type' => 'evernote'
@@ -577,6 +593,10 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
      * @return UserStoreClient object
      */
     protected function get_userstore() {
+        $test = $this->get_config('usedevapi');
+            if (!empty($test)) {
+                $this->api = self::API_DEV;
+            }
         $url = $this->api."/edam/user";
         if (empty($this->userstore)) {
             $parts = parse_url($url);
