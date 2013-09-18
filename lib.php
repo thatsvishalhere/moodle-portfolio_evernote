@@ -226,7 +226,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         }
         $user = $this->get_userstore()->getUser($this->accesstoken);
         $this->evernoteuser = $user->username;
-        $mform->addElement('static', 'plugin_username', 'Evernote User account ', $this->evernoteuser);
+        $mform->addElement('static', 'plugin_username', get_string('evernoteusernamestring', 'portfolio_evernote'), $this->evernoteuser);
         $mform->addElement('static', 'plugin_signinusername', '', html_writer::link($returnurl, get_string('signinanother', 'portfolio_evernote')));
         $mform->addElement('text', 'plugin_notetitle', get_string('customnotetitlelabel', 'portfolio_evernote'));
         $mform->setType('plugin_notetitle', PARAM_RAW);
@@ -234,7 +234,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
         $mform->addElement('text', 'plugin_notetags', get_string('notetagslabel', 'portfolio_evernote'));
         $mform->setType('plugin_notetags', PARAM_TEXT);
         $this->notebookarray = $this->list_notebooks();
-        $notebookselect = $mform->addElement('select', 'plugin_notebooks', 'Select Notebook', $this->notebookarray);
+        $notebookselect = $mform->addElement('select', 'plugin_notebooks', get_string('notebooklabel', 'portfolio_evernote'), $this->notebookarray);
         $notebookselect->setSelected($this->defaultnotebookguid);
         $strrequired = get_string('required');
         $mform->addRule('plugin_notetitle', $strrequired, 'required', null, 'client');
@@ -242,8 +242,12 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
     }
 
     public function get_export_summary() {
-        return array('Evernote Username'=>$this->evernoteuser, 'Note Title'=>s($this->get_export_config('notetitle')),
-            'Note Tags'=>$this->get_export_config('notetags'), 'Notebook'=>$this->notebookarray[$this->get_export_config('notebooks')]);
+        return array(
+            get_string('evernoteusernamestring', 'portfolio_evernote') => $this->evernoteuser,
+            get_string('customnotetitlelabel', 'portfolio_evernote') => s($this->get_export_config('notetitle')),
+            get_string('notetagslabel', 'portfolio_evernote') => $this->get_export_config('notetags'),
+            get_string('notebooklabel', 'portfolio_evernote') => $this->notebookarray[$this->get_export_config('notebooks')]
+        );
     }
 
     public function get_allowed_export_config() {
