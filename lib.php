@@ -194,8 +194,7 @@ class portfolio_plugin_evernote extends portfolio_plugin_push_base {
     }
 
     public static function allows_multiple_exports() {
-        // Since this plugin needs authentication from external sources, we have to disable this.
-        return false;
+        return true;
     }
 
     public static function get_name() {
